@@ -1,0 +1,96 @@
+# commands_used.txt
+# Exact commands for the lab. Run in order. Lines starting with # are comments.
+
+########## PART 1: NEW USER SETUP ##########
+
+# 1. Create a new user (home directory + /bin/bash shell)
+sudo useradd -m -s /bin/bash forensic01
+# Add to sudo group
+sudo usermod -aG sudo forensic01
+# Set a password
+sudo passwd forensic01
+
+# 2. Switch to the new user
+su - forensic01
+
+# 3. Create directory and sample log file
+mkdir -p /home/forensic01/logs/
+cd /home/forensic01/logs/
+
+echo "2026-10-21 08:00:01 INFO  kernel: system boot completed" > sys_events.log
+echo "2026-10-21 08:00:05 INFO  sshd: service started on port 22" >> sys_events.log
+echo "2026-10-21 08:01:12 INFO  sshd: accepted password for user01 from 192.168.1.10" >> sys_events.log
+cat >> sys_events.log << 'EOF'
+2026-10-21 08:02:30 WARNING sudo: user01 attempted to run /usr/bin/apt without privileges
+2026-10-21 08:03:44 ERROR  sshd: failed password for root from 203.0.113.45
+2026-10-21 08:03:51 ERROR  sshd: failed password for root from 203.0.113.45
+2026-10-21 08:05:10 INFO  cron: job daily-backup started
+2026-10-21 08:06:02 WARNING disk: /var usage at 85%
+2026-10-21 08:07:15 INFO  user01: opened /home/user01/report.docx
+2026-10-21 08:08:40 ERROR  nginx: upstream timed out while connecting
+2026-10-21 08:10:00 INFO  systemd: started session 12 for user01
+2026-10-21 08:11:23 WARNING auth: multiple login attempts for root detected
+2026-10-21 08:12:09 ERROR  mysql: connection refused on port 3306
+2026-10-21 08:13:55 INFO  root: package index updated
+2026-10-21 08:15:31 INFO  firewall: rule added to block 203.0.113.45
+2026-10-21 08:16:48 ERROR  user01: permission denied reading /etc/shadow
+2026-10-21 08:18:02 WARNING memory: swap usage at 70%
+2026-10-21 08:19:20 INFO  cron: job daily-backup finished
+2026-10-21 08:20:44 INFO  root: logrotate executed
+2026-10-21 08:22:13 ERROR  disk: I/O error on /dev/sda1
+2026-10-21 08:23:30 INFO  sshd: session closed for user01
+2026-10-21 08:25:00 WARNING ntp: clock drift of 0.5s detected
+2026-10-21 08:26:41 INFO  systemd: reached target multi-user
+2026-10-21 08:30:00 INFO  kernel: audit log checkpoint saved
+EOF
+
+# Check
+wc -l sys_events.log
+ls -l /home/forensic01/logs/
+
+########## PART 2: LOG FILTERING & ANALYSIS ##########
+
+# 1. grep
+grep "ERROR" sys_events.log
+grep -E "root|user01" sys_events.log
+
+# 2. Piping & redirection (press q to quit less)
+grep "ERROR" sys_events.log | tee error_report.txt | less
+grep -E "root|user01" sys_events.log | tee -a error_report.txt | less
+
+# 3. head and tail
+head -n 5 sys_events.log
+tail -n 5 sys_events.log
+
+# 4. cat
+cat sys_events.log
+
+########## PART 3: PERMISSIONS AND OWNERSHIP ##########
+
+# 1. Create file and set permissions (rw owner, none for group/others)
+touch confidential.txt
+chmod 600 confidential.txt
+ls -l confidential.txt
+
+# 2. Change owner to root
+sudo chown root confidential.txt
+ls -l confidential.txt
+
+# 3. Try to read and edit as forensic01 (both are expected to fail)
+cat confidential.txt
+echo "test entry" >> confidential.txt
+
+########## PART 4: USER MANAGEMENT ##########
+
+# 1. Create temporary users
+sudo useradd -m guest1
+sudo useradd -m guest2
+
+# 2. Add guest1 to sudo group
+sudo usermod -aG sudo guest1
+id guest1
+
+# 3. Delete guest2 including home directory
+sudo userdel -r guest2
+getent passwd guest2
+ls /home
